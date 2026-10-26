@@ -1,0 +1,4 @@
+[Parallel(n_jobs=3)]: Using backend LokyBackend with 3 concurrent workers.
+/Users/oesteban/.micromamba/envs/nifreeze/lib/python3.14/site-packages/joblib/externals/loky/process_executor.py:782: UserWarning: A worker stopped while some jobs were given to the executor. This can be caused by a too short worker timeout or by a memory leak.
+  warnings.warn(
+[Parallel(n_jobs=3)]: Done  16 out of  16 | elapsed: 43.0min finished

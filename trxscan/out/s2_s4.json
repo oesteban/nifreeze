@@ -1,0 +1,72 @@
+{
+  "seconds_clean": 1.4486562079982832,
+  "S2_repeat": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S2_threads_1_vs_10": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "seconds_1thread": 1.2071480830200016,
+  "S2_chunked_vs_whole": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "seconds_motion_path": 0.4164616250200197,
+  "S3_zero_pose_vs_clean": {
+    "identical": false,
+    "max_abs": 2.2405943870544434,
+    "max_rel": 0.023437241092324257
+  },
+  "S3_zero_pose_vs_clean_per_volume_max_rel": [
+    0.0,
+    0.09237738698720932,
+    0.09115388989448547,
+    0.09188566356897354,
+    0.09109541773796082,
+    0.0920245349407196,
+    0.09307020157575607,
+    0.12393571436405182,
+    0.12733259797096252,
+    0.1305130124092102,
+    0.1257082223892212,
+    0.12594367563724518,
+    0.1297122836112976
+  ],
+  "S3_unmoved_volumes_vs_zero_pose": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S3_moved_volume_changed_rel": 0.7068377137184143,
+  "S2_chunked_motion_vs_whole": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S4_subset_motion_vs_full": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S4_subset_zero_pose_vs_full": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S4_subset_eddy_vs_full": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "S4_subset_eddy_without_max_b": {
+    "identical": true,
+    "max_abs": 0.0,
+    "max_rel": 0.0
+  },
+  "peak_rss_gb": 1.456787109375
+}

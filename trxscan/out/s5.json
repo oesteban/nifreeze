@@ -1,0 +1,355 @@
+{
+  "TRT_s": 0.032,
+  "eddy": 0.0026041666666666665,
+  "RAS": {
+    "x@1000": {
+      "slope_ijk": [
+        -0.0606,
+        0.0045,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        14.81,
+        -198.32,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0833,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.0833,
+        -0.0,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.012765030320750503
+    },
+    "y@1000": {
+      "slope_ijk": [
+        -0.0,
+        -0.0768,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        16.0,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0833,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.0,
+        -0.0833,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 2.979447189758559e-07
+    },
+    "z@1000": {
+      "slope_ijk": [
+        -0.0,
+        0.0058,
+        -0.0367
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        -22.15,
+        3.48
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "pred_if_grid_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "fit_rms_resid_vox": 0.008589267952718855
+    },
+    "xyz@1000": {
+      "slope_ijk": [
+        -0.0313,
+        -0.0428,
+        -0.0322
+      ],
+      "zero_crossing_ijk": [
+        44.02,
+        32.22,
+        42.86
+      ],
+      "pred_if_world_comp": [
+        -0.0481,
+        -0.0481,
+        -0.0481
+      ],
+      "pred_if_grid_comp": [
+        -0.0481,
+        -0.0481,
+        -0.0481
+      ],
+      "fit_rms_resid_vox": 0.08079449787928945
+    },
+    "x@2000": {
+      "slope_ijk": [
+        -0.0908,
+        -0.0096,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        17.7,
+        166.7,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.1667,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.1667,
+        -0.0,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.08963473670507653
+    }
+  },
+  "LPS": {
+    "x@1000": {
+      "slope_ijk": [
+        -0.0606,
+        0.0045,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        14.81,
+        -198.32,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0833,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        0.0833,
+        -0.0,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.012765030320750503
+    },
+    "y@1000": {
+      "slope_ijk": [
+        -0.0,
+        -0.0768,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        16.0,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0833,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.0,
+        0.0833,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 2.979447189758559e-07
+    },
+    "z@1000": {
+      "slope_ijk": [
+        -0.0,
+        0.0058,
+        -0.0367
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        -22.15,
+        3.48
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "pred_if_grid_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "fit_rms_resid_vox": 0.008589267952718855
+    },
+    "xyz@1000": {
+      "slope_ijk": [
+        -0.0313,
+        -0.0428,
+        -0.0322
+      ],
+      "zero_crossing_ijk": [
+        44.02,
+        32.22,
+        42.86
+      ],
+      "pred_if_world_comp": [
+        -0.0481,
+        -0.0481,
+        -0.0481
+      ],
+      "pred_if_grid_comp": [
+        0.0481,
+        0.0481,
+        -0.0481
+      ],
+      "fit_rms_resid_vox": 0.08079449787928945
+    },
+    "x@2000": {
+      "slope_ijk": [
+        -0.0908,
+        -0.0096,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        17.7,
+        166.7,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.1667,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        0.1667,
+        -0.0,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.08963473670507653
+    }
+  },
+  "oblique": {
+    "x@1000": {
+      "slope_ijk": [
+        -0.0606,
+        0.0045,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        14.81,
+        -198.32,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0833,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.0722,
+        0.0417,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.012765030320750503
+    },
+    "y@1000": {
+      "slope_ijk": [
+        -0.0,
+        -0.0768,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        16.0,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0833,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.0417,
+        -0.0722,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 2.979447189758559e-07
+    },
+    "z@1000": {
+      "slope_ijk": [
+        -0.0,
+        0.0058,
+        -0.0367
+      ],
+      "zero_crossing_ijk": [
+        NaN,
+        -22.15,
+        3.48
+      ],
+      "pred_if_world_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "pred_if_grid_comp": [
+        -0.0,
+        -0.0,
+        -0.0833
+      ],
+      "fit_rms_resid_vox": 0.008589267952718855
+    },
+    "xyz@1000": {
+      "slope_ijk": [
+        -0.0313,
+        -0.0428,
+        -0.0322
+      ],
+      "zero_crossing_ijk": [
+        44.02,
+        32.22,
+        42.86
+      ],
+      "pred_if_world_comp": [
+        -0.0481,
+        -0.0481,
+        -0.0481
+      ],
+      "pred_if_grid_comp": [
+        -0.0657,
+        -0.0176,
+        -0.0481
+      ],
+      "fit_rms_resid_vox": 0.08079449787928945
+    },
+    "x@2000": {
+      "slope_ijk": [
+        -0.0908,
+        -0.0096,
+        -0.0
+      ],
+      "zero_crossing_ijk": [
+        17.7,
+        166.7,
+        NaN
+      ],
+      "pred_if_world_comp": [
+        -0.1667,
+        -0.0,
+        -0.0
+      ],
+      "pred_if_grid_comp": [
+        -0.1443,
+        0.0833,
+        -0.0
+      ],
+      "fit_rms_resid_vox": 0.08963473670507653
+    }
+  }
+}

@@ -1,0 +1,16 @@
+[project]
+name = "trxscan-spike"
+version = "0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "trxscan[dipy,trx]",
+    "nifreeze",
+    "pytest>=8",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+trxscan = { git = "https://github.com/PennLINC/TRXScan", rev = "680fc4f4559c5dd9fa759c2031f07f83384da2df", subdirectory = "python" }
+nifreeze = { path = "/Users/oesteban/workspace/nifreeze-rung3" }
