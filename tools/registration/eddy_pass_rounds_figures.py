@@ -47,9 +47,15 @@ Reported beside: each round against the one before, of both kinds, on every copy
 and the rounds the pass needs (the last round that removes the shared field and is
 "better" than the one before on some copy); the plain rounds' round 4 against round 1;
 ``x4``, ``pass-i9-u`` and ``r1`` against today's pass (``pass-e12-u``, Test 4) on every
-copy; ``x4`` against ``pass-i9-u``; each arm's medians. Writes
-``<out>/eddy-rounds-<protocol>-decision.json``, its tables, and two figures: each arm's
-median error by round (``-rounds.png``) and the rules' comparisons on the error
+copy; ``x4`` against ``pass-i9-u``; each arm's medians.
+
+Post hoc, after the results (95%, :data:`POST_HOC`): ``x1`` against today's pass and
+against the instant update with the shared field removed; the instant update against the
+delayed one, as they are and with the shared field removed; the instant update with the
+shared field removed against as it is; ``x3`` and ``x4`` against ``x1``.
+
+Writes ``<out>/eddy-rounds-<protocol>-decision.json``, its tables, and two figures: each
+arm's median error by round (``-rounds.png``) and the rules' comparisons on the error
 (``-comparisons.png``)::
 
     uv run tools/registration/eddy_pass_rounds_figures.py --results <results> --out <out>
@@ -82,6 +88,16 @@ SHELL = 1000.0
 """Rule 3's shell."""
 KINDS = {"round": "Plain rounds", "removed": "Shared field removed"}
 """The kinds of rounds, as the figures name them."""
+POST_HOC = (
+    ("removed1-i9", "pass-e12-u"),
+    ("removed1-i9", "pass-i9-u-removed"),
+    ("pass-i9-u", "round1-i9"),
+    ("pass-i9-u-removed", "removed1-i9"),
+    ("pass-i9-u-removed", "pass-i9-u"),
+    ("removed3-i9", "removed1-i9"),
+    ("removed4-i9", "removed1-i9"),
+)
+"""The comparisons made after the results (candidate, reference), on every copy."""
 
 
 def _arm(kind: str, k: int) -> str:
@@ -158,6 +174,12 @@ def decide(
         for arm in (last, "pass-i9-u", _arm("round", 1))
         if (copy, arm) in present
     }
+    post_hoc = {
+        f"{copy}/{candidate}/{reference}": paired(rows, (copy, candidate), (copy, reference))
+        for candidate, reference in POST_HOC
+        for copy in copies
+        if {(copy, candidate), (copy, reference)} <= present
+    }
     return {
         "protocol": meta["Protocol"],
         "margins": margins,
@@ -175,6 +197,7 @@ def decide(
             "against_today": today,
             "against_instant": each("pass-i9-u", tests=1),
         },
+        "post_hoc": post_hoc,
         "rounds": rounds,
         "summary": summary(rows, subset),
         "frame_drift": meta["FrameDrift"],
@@ -248,6 +271,8 @@ def tables(decision: dict[str, Any], out: Path) -> None:
         for label, c in reported[group].items()
     ]
     _write(out / f"eddy-rounds-{protocol}-reported.csv", header, _table(listed, names))
+    listed = [("Post hoc", label.split("/")[0], c) for label, c in decision["post_hoc"].items()]
+    _write(out / f"eddy-rounds-{protocol}-posthoc.csv", header, _table(listed, names))
 
 
 def _table(listed: list[tuple[str, str, dict[str, Any]]], names: list[str]) -> list[list[Any]]:
@@ -299,7 +324,11 @@ def rounds_figure(decision: dict[str, Any], out: Path, rounds: int) -> None:
         ]
         cells = [(label, arm) for label, arm in cells if f"unmoved/{arm}" in arms]
         connected = rounds
-        x = np.array([k if k < connected else k + 0.6 for k in range(len(cells))], dtype=float)
+        # The points after the rounds stand apart, far enough for their labels
+        x = np.array(
+            [k if k < connected else k + 0.6 + 0.5 * (k - connected) for k in range(len(cells))],
+            dtype=float,
+        )
         for col, copy in enumerate(copies):
             ax = axes[row, col]
             values = [arms[f"{copy}/{arm}"] for _, arm in cells]
