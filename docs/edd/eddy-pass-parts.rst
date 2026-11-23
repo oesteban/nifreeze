@@ -33,7 +33,7 @@ Rule 4, where the rest comes from
 The registrations
 ~~~~~~~~~~~~~~~~~
 ``e12``
-    elastix, ``AFFINE``: today's pass.
+    elastix, ``AFFINE``: today's registration.
 ``i9``
     ITK, the ``itk`` section of :data:`~nifreeze.registration.base.AFFINE` as packaged:
     head motion and a field along phase encoding (:doc:`eddy-targets`, Test 3).
@@ -42,8 +42,12 @@ The registrations
     (`#736 <https://github.com/nipreps/nifreeze/issues/736>`__): only the field's 3
     parameters are estimated, about the grid's centre, and the head motion stays the
     start's.
-    The phantom's field is zero at the grid's centre, so these 3 parameters are exactly
-    its family.
+    The phantom's field turns about voxel ``n // 2`` (TRXScan's convention), half a voxel
+    from the grid's centre ``(n - 1) / 2`` on each axis, so from a start without a field
+    these 3 parameters miss a shift along phase encoding: on ``e2``, a median of 0.013,
+    0.022 and 0.030 mm at b=1000, 2000 and 3500, at most 0.080 mm.
+    The working hypothesis said they were exactly the phantom's family; that was wrong
+    (found by the review with fresh eyes, after the results).
 
 Each registration runs on one thread with seed 12345, and each arm in a process of its
 own (`#732 <https://github.com/nipreps/nifreeze/issues/732>`__).
@@ -59,7 +63,7 @@ Phase encoding is along ``j`` (world y).
 All 192 volumes are registered; the rules use the 64 confirmation volumes (21, 22 and 21
 per shell).
 The head-motion step (``gqi-krr`` then ``gp-loo``, rigid, elastix) runs on each copy;
-on ``m2s0e2`` it is Test 1's.
+on ``m2s0e2`` it reproduces Test 1's bit for bit.
 
 On each copy, with ``<r>`` the registration:
 
@@ -86,15 +90,16 @@ How the results are judged
 The *error* is Test 1's: the whole mapping against the truth, in the frame of the arm's
 targets (mean displacement within the brain, mm).
 The *stored head motion*, which turns the b-vectors, is the split of ``i9``'s estimate;
-for ``e12`` and ``i3``, it is the head-motion step's.
+for ``e12`` and ``i3``, it is the start's: the head-motion step's in the passes, the
+truth's in the oracle and in the arms that start from the truth.
 It is scored by its rotation against the truth's (degrees) and its displacement across
 phase encoding (mean within the brain, mm).
 The split of an estimate into head motion and field puts the field's shift along phase
 encoding into the head motion, measured at the world's origin, while the phantom's field
-is zero at the grid's centre, 17.5 mm from the origin along phase encoding.
+is zero 18.5 mm from the origin along phase encoding.
 So on ``e2`` the truth's own split has head motion, a pure shift along phase encoding
-(median 0.21 mm, at most 0.90 mm within the brain), and the shift along phase encoding is
-reported but judged by no rule.
+(median 0.21 mm, at most 0.90 mm within the brain, over all 192 volumes), and the shift
+along phase encoding is reported but judged by no rule.
 The field's error, the volume change and the strain along phase encoding are taken as
 in Test 3.
 
@@ -102,9 +107,11 @@ Comparisons are paired by volume (:func:`experiments.paired_comparison`, stratif
 shell, 10,000 resamples).
 The margins are 0.01 voxel: 0.02 mm on the error, the field and the displacement across
 phase encoding; 0.0215° on the rotation (0.02 mm at the brain's mean radius, 53.36 mm);
-and Test 2's 0.0375% on the volume change.
-Within a rule, each interval is widened for the rule's number of comparisons
-(Bonferroni).
+and 0.0375% on the volume change (0.02 mm over the brain's mean radius, as Test 2's).
+Within a rule, the interval over all shells is widened for the rule's number of
+comparisons (Bonferroni: 98.75% for rule 1, 99% for rule 2, 97.5% for rules 3 and 4);
+the intervals and verdicts by shell are 95%, and so are those reported beside the
+rules.
 
 Rule 1
     On ``e2``, ``hm-i9-hm``'s rotation and displacement across phase encoding are
@@ -127,8 +134,8 @@ Rule 4
 
 Results
 ~~~~~~~
-By the rules, the 9-parameter pass stays the candidate, and its error comes from its
-targets, not from where it starts: the next test runs repeated delayed passes.
+By the rules, the 9-parameter pass stays the candidate; its targets add to its error,
+and where it starts does not, so the next test runs repeated delayed passes.
 
 .. figure:: ../_static/registration/eddy-pass-parts/eddy-parts-sherbrooke-invented-motion.png
    :alt: The difference in the stored head motion's rotation and displacement across
@@ -136,11 +143,12 @@ targets, not from where it starts: the next test runs repeated delayed passes.
 
    The stored head motion's error on the eddy-only copy minus the copy with neither,
    paired by volume: the median difference (black, all shells, with its interval) and
-   each shell's.
+   each shell's (95%).
    The last row is the 9-parameter pass minus the head-motion step, both on the eddy-only
    copy.
    The dotted lines are the margins.
-   Rows marked *post hoc* are not in the rules (below).
+   The black intervals are widened for their family: 98.75% for rule 1's rows, 99.17%
+   for the rows marked *post hoc*, which are not in the rules (below).
 
 * **Rule 1 fails, on the rotation.**
   On ``e2``, the 9-parameter pass reports 0.020° more rotation than on ``unmoved``
@@ -155,21 +163,28 @@ targets, not from where it starts: the next test runs repeated delayed passes.
   Where there is head motion, it is "worse": +0.054 mm [+0.033, +0.077] on ``m2s0`` and
   +0.073 mm [+0.050, +0.093] on ``m2s0e2``; on ``e2`` it is "inconclusive" (+0.014 mm),
   and "worse" at b=3500 (+0.090 mm).
-  It keeps the head-motion step's errors, which the 9 parameters reduce, so the
+  It keeps the head-motion step's head motion, which the 9 parameters refine, so the
   9-parameter pass stays the candidate.
+  Part of its loss on the copies with eddy currents may come from the shift along phase
+  encoding that it cannot fit (above, at most 0.080 mm); ``m2s0`` has no field, and the
+  rule fails there too.
 * **Rule 3 holds.**
-  On ``m2s0``, neither pass reports more field than on ``unmoved``: +0.002 mm with the 9
-  parameters and +0.001 mm with the field only.
+  On ``m2s0``, each pass's field error is "not worse" than on ``unmoved``: +0.002 mm
+  with the 9 parameters and +0.001 mm with the field only (upper bounds 0.017 and
+  0.016 mm); at b=2000 both are "inconclusive".
 * **Rule 4: the targets count, the start does not.**
   On ``m2s0e2``, the 9-parameter pass ends at the same place from the head-motion step's
   estimate as from the truth (a median difference of 8e-7 mm).
   Targets trained on the data that the head-motion step corrected add 0.233 mm
   [0.187, 0.304] over targets trained on truth-corrected data, and are "worse" on every
   shell (+0.108, +0.235 and +0.375 mm at b=1000, 2000 and 3500).
-  The ceiling, ``truth-i9-truth``, reaches 0.198 mm, against 0.423 mm for the pass.
+  The ceiling, ``truth-i9-truth``, reaches 0.198 mm, against 0.423 mm for the pass: the
+  targets explain part of the error, not all of it.
 
 .. csv-table:: Each comparison of the rules, then those reported: the median difference,
-   candidate minus reference, with its interval, overall and by shell.
+   candidate minus reference, with its interval over all shells (widened within each
+   rule and within the post hoc family; 95% for today's update), and each shell's
+   median and 95% verdict.
    :file: ../_static/registration/eddy-pass-parts/eddy-parts-sherbrooke-comparisons.csv
    :header-rows: 1
    :widths: auto
@@ -187,22 +202,26 @@ This section and the next are reported beside the rules; they decide nothing.
    data, and the target's noise (the noise-free original).
    Top, the 9 parameters; bottom, the field only.
 
-* **The 9 parameters do not depend on where they start,** on any copy (median
-  differences below 1e-6 mm, intervals within 1e-5 mm).
+* **The 9 parameters end at the same place from both starts tested,** the head-motion
+  step's estimate and the truth, on every copy (median differences below 1e-6 mm,
+  intervals within 1e-5 mm).
 * **Their targets cost them on every copy with something to correct:**
   +0.164 mm with head motion only, +0.139 mm with eddy currents only and +0.233 mm with
   both.
   On ``unmoved`` the cost is "inconclusive" (+0.027 mm), but "worse" at b=3500
   (+0.131 mm).
-  On every copy, b=3500 gains the most from better targets.
+  On every copy, b=3500 gains the most from better targets (where b-value,
+  signal-to-noise and the field's size all change together).
 * **The field only's start is the head motion it keeps,** and it counts on every copy
   (+0.042 to +0.225 mm).
-  With the same targets and the true head motion, its median error is below the
-  9-parameter pass's on every copy: 0.300 against 0.423 mm on ``m2s0e2``.
+  Started from the truth, which it keeps (the head motion, and the field's shift along
+  phase encoding), its median error is below the 9-parameter pass's on every copy, with
+  the same targets: 0.300 against 0.423 mm on ``m2s0e2`` (medians, not a paired test).
 * **What in the targets costs what.**
   With head motion only, targets trained on the step's correction cost the field only
-  0.021 mm ("inconclusive"), against 0.164 mm for the 9 parameters: the step's errors
-  in the training data pull the head motion that the 9 parameters refine.
+  0.021 mm ("inconclusive"), against 0.164 mm for the 9 parameters.
+  That fits the step's errors in the training data pulling the head motion that the 9
+  parameters refine, which is not tested here.
   With eddy currents in the data, they cost both (0.139 and 0.122 mm on ``e2``).
 * **Better targets alone** (``truth-<r>-hm`` against ``hm-<r>-hm``) help the 9
   parameters by as much as both changes together, since the start does not matter to
@@ -227,9 +246,10 @@ Today's pass, the floor and the volume change
   On ``unmoved``, with nothing to correct, the passes leave 0.231 (elastix), 0.252 (9
   parameters) and 0.240 mm (field only); registered to the noise-free originals,
   0.152, 0.147 and 0.117 mm.
-* **The volume change** of the ITK passes is +0.14 to +0.18%; elastix's delayed pass,
-  +0.36 to +0.51%; today's, +0.52 to +0.75%.
-* **Time:** 2.3 to 2.4 s per registration, with any of the three registrations.
+* **The volume change** of the delayed ITK passes is +0.15 to +0.18%; elastix's
+  delayed pass, +0.36 to +0.51%; today's, +0.52 to +0.75%.
+* **Time:** 2.2 to 2.5 s per registration (each arm's median), with any of the three
+  registrations.
 
 .. csv-table:: Each arm's medians on the confirmation volumes: the error, overall and by
    shell; the stored head motion's rotation and displacements across and along phase
@@ -253,21 +273,23 @@ comparisons (the rows marked *post hoc* in the figure and the table above):
 
 * **The head-motion step** reports 0.062° more rotation on ``e2`` (+0.062°
   [+0.041, +0.083], "worse"), and 0.031 mm more across phase encoding ("inconclusive").
-* **The 9 parameters with truth-trained targets** report none (−0.001° and −0.002 mm,
-  "not worse"), nor **registered to the noise-free originals** (+0.003° and −0.000 mm).
+* **The 9 parameters with truth-trained targets** are "not worse" (−0.001° and
+  −0.002 mm), and so are they **registered to the noise-free originals** (+0.003° and
+  0.000 mm).
 
-So the 9 parameters keep head motion and the field apart; with the realistic targets
-they report a third of the rotation that the step adds.
-The extra rotation comes in through the targets, trained on data that the step left
-with its eddy currents and corrected with the rotation it reports; this analysis does not
-separate the two.
+Rule 1's verdict stands.
+This analysis suggests that, with clean targets, the 9 parameters do not mistake the
+field for head motion, and that the extra rotation arrives with the realistic targets,
+where it is a third of what the step adds.
+Those targets are trained on data that the step left with its eddy currents and
+corrected with the rotation it reports; this analysis does not separate the two.
 
 Checks
 ~~~~~~
 * The truth is exact, to 6e-14 mm.
 * The field-only estimates are the given head motion followed by a field along phase
-  encoding, to 3e-13 mm.
-* On ``m2s0e2``, the head-motion step is Test 1's bit for bit; the delayed passes
+  encoding, to 2.7e-13 mm, above the 1e-13 mm that the working hypothesis posted.
+* On ``m2s0e2``, the head-motion step reproduces Test 1's bit for bit; the delayed passes
   reproduce Test 3's to 7.5e-14 mm, and today's pass and the registration to the
   noise-free originals bit for bit.
 * No registration failed.
@@ -275,26 +297,32 @@ Checks
 Consequences
 ~~~~~~~~~~~~
 * The 9-parameter pass stays the candidate for the eddy-current pass.
-  The field-only setting (`#737 <https://github.com/nipreps/nifreeze/pull/737>`__) would
-  be the best pass with the true head motion, but it keeps the head-motion step's errors.
-* Its error comes from the data its targets are trained on, not from where its
-  registrations start, so a local minimum of the cost near the estimates does not explain
-  it.
+  The field-only setting (`#737 <https://github.com/nipreps/nifreeze/pull/737>`__) keeps
+  the head-motion step's head motion, and loses where there is head motion.
+* The data its targets are trained on add to its error, and where its registrations
+  start does not, between the two starts tested; so a local minimum of the cost between
+  the estimates and the truth does not explain it.
   The next test runs repeated delayed passes, each training on the data the last one
   corrected; their best case is the ceiling, 0.198 mm on ``m2s0e2`` against 0.423 mm for
   one pass.
-* The head-motion step reports rotation when there are eddy currents, and the
-  9-parameter pass reduces the step's rotation error where there is head motion
-  (medians: 0.299° to 0.247° on ``m2s0``, 0.359° to 0.263° on ``m2s0e2``) but not on
-  ``unmoved`` (0.135° to 0.149°).
-* The instant update's harm at b=1000 does not come from correcting head motion or eddy
-  currents: it is there on data with neither.
+* Post hoc, the head-motion step reports rotation when there are eddy currents.
+  The 9-parameter pass's median rotation error is below the step's where there is
+  something to correct (0.299° to 0.247° on ``m2s0``, 0.191° to 0.180° on ``e2``, 0.359°
+  to 0.263° on ``m2s0e2``) and above it on ``unmoved`` (0.135° to 0.149°); only the
+  comparison on ``e2`` is tested ("not worse").
+* The instant update's harm at b=1000 needs neither head motion nor eddy currents to
+  appear: it is there on ``unmoved`` (+0.149 mm), though larger with head motion (+0.212
+  and +0.218 mm).
 
 Limits
 ~~~~~~
-* The phantom's field turns about the grid's centre, with no shift along phase encoding.
-  Real eddy currents can shift the image along phase encoding, which the field-only
-  pass's 3 parameters cannot fit.
+* The field-only pass turns the field about the grid's centre, half a voxel from the
+  phantom's, and cannot fit the shift along phase encoding between the two (at most
+  0.080 mm on ``e2``).
+  Real eddy currents can shift the image along phase encoding by more, which its 3
+  parameters cannot fit either.
+* Across shells, the b-value, the signal-to-noise ratio and the field's size change
+  together; the shell effects here do not separate them.
 * One protocol, Sherbrooke; HCP-YA's b=3000 gap (:doc:`eddy-targets`) is not tested here.
 
 Reproducing
@@ -302,10 +330,13 @@ Reproducing
 The run was made outside the phantom dataset, without a ``datalad run`` record, with the
 dataset at commit 826e611 at the start and the end, itk-elastix 0.25.4, and
 oesteban/nifreeze@10ecfe219 (clean), on CPUs 0-5; it took 2 h 27 min.
+The head-motion steps had run before the working hypothesis was posted, as it says
+(20:49 to 21:17 UTC; on ``m2s0e2``, two minutes before 10ecfe219), and the run reused
+them; its time does not include them.
+The arms started nine seconds after the working hypothesis was posted.
 The rules' code is unchanged since 10ecfe219; the post hoc analysis, the tables and the
-figures come from later commits of ``eddy_pass_parts_figures.py``.
-The head-motion step on ``m2s0e2`` and the checks against Test 3 read Test 1's and
-Test 3's results.
+figures come from later versions of ``eddy_pass_parts_figures.py``.
+The checks read Test 1's head-motion step and Test 3's arms.
 From the repository's root::
 
     OMP_NUM_THREADS=6 uv run tools/registration/eddy_pass_parts.py --dataset <dataset> \
