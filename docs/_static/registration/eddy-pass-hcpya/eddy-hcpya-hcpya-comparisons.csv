@@ -1,0 +1,7 @@
+Rule,Comparison,Median difference [interval],Verdict,b=1000,b=2000,b=3000
+Rule 1: the delayed pass against today's,m2s0e2/hm-i9-hm-removed against m2s0e2/pass-e12-u (all),"-0.023 [-0.030, -0.018]",better,-0.143 (better),-0.013 (better),+0.027 (inconclusive)
+"Rule 2: the delayed pass against today's, by shell",m2s0e2/hm-i9-hm-removed against m2s0e2/pass-e12-u (b=1000),"-0.143 [-0.183, -0.109]",better,-0.143 (better),,
+"Rule 2: the delayed pass against today's, by shell",m2s0e2/hm-i9-hm-removed against m2s0e2/pass-e12-u (b=2000),"-0.013 [-0.020, -0.000]",better,,-0.013 (better),
+"Rule 2: the delayed pass against today's, by shell",m2s0e2/hm-i9-hm-removed against m2s0e2/pass-e12-u (b=3000),"+0.027 [+0.005, +0.046]",inconclusive,,,+0.027 (inconclusive)
+"Rule 3: scaled samples against 17,000, highest shell",m2s0e2/hm-i9s-hm-removed against m2s0e2/hm-i9-hm-removed (b=3000),"-0.011 [-0.020, -0.008]",not worse,,,-0.011 (not worse)
+"Rule 4: the instant update against the delayed, highest shell",m2s0e2/pass-i9-u-removed against m2s0e2/hm-i9-hm-removed (b=3000),"-0.027 [-0.036, -0.016]",better,,,-0.027 (better)

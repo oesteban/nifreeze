@@ -1,0 +1,10 @@
+Rule,Comparison,Median difference [interval],Verdict,b=1000,b=2000,b=3000
+The removal,m2s0e2/hm-i9-hm-removed against m2s0e2/hm-i9-hm (all shells),"-0.006 [-0.010, -0.004]",not worse,-0.013 (better),-0.008 (not worse),-0.002 (not worse)
+The removal,m2s0e2/hm-i9s-hm-removed against m2s0e2/hm-i9s-hm (all shells),"-0.007 [-0.008, -0.004]",not worse,-0.015 (better),-0.006 (not worse),-0.002 (not worse)
+The removal,m2s0e2/pass-i9-u-removed against m2s0e2/pass-i9-u (all shells),"-0.015 [-0.019, -0.011]",better,-0.054 (better),-0.015 (better),-0.001 (not worse)
+Against today's pass,m2s0e2/hm-i9s-hm-removed against m2s0e2/pass-e12-u (all shells),"-0.030 [-0.036, -0.024]",better,-0.143 (better),-0.020 (better),+0.012 (inconclusive)
+Against today's pass,m2s0e2/pass-i9-u-removed against m2s0e2/pass-e12-u (all shells),"-0.048 [-0.058, -0.037]",better,-0.181 (better),-0.037 (better),+0.000 (inconclusive)
+Against today's pass,m2s0e2/hm-i9-hm against m2s0e2/pass-e12-u (all shells),"-0.019 [-0.022, -0.013]",better,-0.129 (better),-0.001 (not worse),+0.022 (worse)
+Noise-free originals,m2s0e2/oracle-i9s against m2s0e2/oracle-i9 (all shells),"-0.012 [-0.014, -0.010]",not worse,-0.008 (not worse),-0.007 (not worse),-0.026 (better)
+Noise-free originals,m2s0e2/oracle-i9s against m2s0e2/oracle-e12 (all shells),"-0.048 [-0.050, -0.046]",better,-0.079 (better),-0.047 (better),-0.019 (better)
+Noise-free originals,m2s0e2/oracle-i9 against m2s0e2/oracle-e12 (all shells),"-0.039 [-0.042, -0.036]",better,-0.070 (better),-0.039 (better),+0.013 (inconclusive)
