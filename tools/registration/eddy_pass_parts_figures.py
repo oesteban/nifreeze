@@ -56,8 +56,13 @@ Q5, where the rest comes from (the candidate, on ``m2s0e2``)
 
 Reported beside: Q4, the floor (each registration on ``unmoved``); Q6, today's pass
 (``pass-e12-u``) against ``hm-e12-hm`` on each copy; Q5 on every copy and registration;
-the head-motion step's errors; each arm's medians. Writes
-``<out>/eddy-parts-<protocol>-decision.json`` and its tables::
+the head-motion step's errors; each arm's medians. Post hoc, not in the working
+hypothesis: Q1's ``e2`` minus ``unmoved`` for the head-motion step's head motion, and for
+the 9 parameters with truth-trained targets and with the noise-free original as the
+target (Bonferroni over its 6 comparisons). Writes
+``<out>/eddy-parts-<protocol>-decision.json``, its tables, and two figures: the head
+motion reported on the eddy-only copy (``-invented-motion.png``) and Q5's ladder on every
+copy (``-sources.png``)::
 
     uv run tools/registration/eddy_pass_parts_figures.py --results <results> --out <out>
 """
@@ -207,6 +212,29 @@ def invented_field(rows: list[dict[str, Any]], margins: dict[str, float]) -> dic
     return {"comparisons": pairs, "holds": all(_ok(c) for c in pairs.values())}
 
 
+POSTHOC = {
+    "head-motion step": "hm-e12-hm",
+    "better targets": "truth-i9-hm",
+    "noise-free target": "oracle-i9",
+}
+"""Post hoc, the other sources of head motion: the step's, and the 9 parameters' with
+truth-trained targets and with the noise-free original as the target."""
+
+
+def invented_motion_posthoc(
+    rows: list[dict[str, Any]], margins: dict[str, float]
+) -> dict[str, Any]:
+    """Post hoc, not in the working hypothesis: Q1's ``e2`` minus ``unmoved``, per source."""
+    tests = 2 * len(POSTHOC)
+    return {
+        f"{key}/{label}": compare(
+            rows, ("e2", arm), ("unmoved", arm), key, margins[key], tests=tests
+        )
+        for key in ("motion_rotation_deg", "motion_across_mean")
+        for label, arm in POSTHOC.items()
+    }
+
+
 def sources(
     rows: list[dict[str, Any]], margin: float, copy: str, registration: str, tests: int
 ) -> dict[str, Any]:
@@ -344,6 +372,7 @@ def decide(
         "q3": invented_field(rows, margins),
         "q5": q5,
         "reported": reported,
+        "posthoc": invented_motion_posthoc(rows, margins),
         "summary": summary(rows),
         "cascade": cascade_summary(cascade),
         "checks": meta["Checks"],
@@ -374,6 +403,8 @@ def comparisons(decision: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]
     listed += [("Q5", "start", q5["start"]), ("Q5", "targets", q5["targets"])]
     for label, c in decision["reported"]["q6"].items():
         listed.append(("Q6 (reported)", label, c))
+    for label, c in decision["posthoc"].items():
+        listed.append(("Post hoc", label, c))
     return listed
 
 
@@ -444,6 +475,176 @@ def tables(decision: dict[str, Any], out: Path) -> None:
     )
 
 
+COPY_TITLES = {
+    "unmoved": "Neither",
+    "m2s0": "Head motion only",
+    "e2": "Eddy currents only",
+    "m2s0e2": "Both",
+}
+"""The copies, as the figures name them."""
+
+
+def _interval_row(ax: Any, y: float, c: dict[str, Any], offsets: np.ndarray) -> None:
+    """One comparison: all shells (ink diamond) and each shell, with their intervals."""
+    from eddy_targets_figures import INK, SHELL_COLORS, SHELL_MARKERS
+
+    ax.plot([c["median_low"], c["median_high"]], [y + offsets[0]] * 2, color=INK, lw=2)
+    ax.scatter([c["median"]], [y + offsets[0]], color=INK, s=30, marker="D", zorder=3)
+    for k, value in enumerate(c["shells"].values()):
+        ax.plot(
+            [value["median_low"], value["median_high"]],
+            [y + offsets[k + 1]] * 2,
+            color=SHELL_COLORS[k],
+            lw=1.6,
+        )
+        ax.scatter(
+            [value["median"]],
+            [y + offsets[k + 1]],
+            color=SHELL_COLORS[k],
+            marker=SHELL_MARKERS[k],
+            s=24,
+            zorder=3,
+        )
+
+
+def invented_figure(decision: dict[str, Any], out: Path) -> None:
+    """Q1 and the post hoc sources: head motion reported on the eddy-only copy."""
+    from eddy_targets_figures import INK, RULE, SHELL_COLORS, SHELL_MARKERS, _style
+    from eddy_targets_figures import _margins as _lines
+
+    plt = _style()
+    q1, posthoc = decision["q1"]["comparisons"], decision["posthoc"]
+    panels = (
+        ("motion_rotation_deg", "Rotation of the stored head motion, difference (deg)"),
+        ("motion_across_mean", "Displacement across phase encoding, difference (mm)"),
+    )
+    fig, axes = plt.subplots(2, 1, figsize=(7.5, 7.2), layout="constrained")
+    for ax, (key, xlabel) in zip(axes, panels, strict=True):
+        listed = [
+            ("Head-motion step (post hoc)", posthoc[f"{key}/head-motion step"]),
+            ("9-parameter pass (rule 1)", q1[f"{key}/unmoved"]),
+            (
+                "9-parameter pass, truth-trained\ntargets (post hoc)",
+                posthoc[f"{key}/better targets"],
+            ),
+            (
+                "9 parameters, the noise-free\noriginal as target (post hoc)",
+                posthoc[f"{key}/noise-free target"],
+            ),
+            (
+                "9-parameter pass minus the step,\non the eddy-only copy (rule 1)",
+                q1[f"{key}/head-motion step"],
+            ),
+        ]
+        _lines(ax, decision["margins"][key])
+        shells = list(listed[0][1]["shells"])
+        offsets = np.linspace(-0.27, 0.27, len(shells) + 1)
+        ys = np.arange(len(listed))[::-1].astype(float)
+        ax.axhline(0.5, color=RULE, linewidth=0.8)
+        for y, (_, c) in zip(ys, listed, strict=True):
+            _interval_row(ax, y, c, offsets)
+            ax.text(
+                1.01,
+                y,
+                c["verdict"],
+                transform=ax.get_yaxis_transform(),
+                va="center",
+                color=INK,
+                fontsize=8,
+            )
+        ax.set_yticks(ys, [label for label, _ in listed])
+        ax.tick_params(axis="y", length=0)
+        ax.spines["left"].set_visible(False)
+        ax.set_xlabel(xlabel)
+    handles = [
+        plt.Line2D([], [], color=INK, marker="D", lw=2, label="All shells"),
+        *[
+            plt.Line2D(
+                [], [], color=SHELL_COLORS[k], marker=SHELL_MARKERS[k], lw=1.6, label=f"b={s}"
+            )
+            for k, s in enumerate(shells)
+        ],
+    ]
+    fig.legend(
+        handles=handles, loc="outside upper center", ncols=len(handles), frameon=False, fontsize=8
+    )
+    fig.savefig(out / f"eddy-parts-{decision['protocol']}-invented-motion.png", dpi=200)
+    plt.close(fig)
+
+
+LADDER = (
+    ("the\npass", "hm-{r}-hm"),
+    ("start\nfrom the\ntruth", "hm-{r}-truth"),
+    ("targets\nfrom the\ntruth", "truth-{r}-truth"),
+    ("noise-free\ntarget", "oracle-{r}"),
+)
+"""The cells of Q5's ladder, in order: each changes one thing from the one before."""
+
+
+def ladder_figure(decision: dict[str, Any], out: Path) -> None:
+    """Q5 on every copy: the median error as the start, then the targets, are made right."""
+    from eddy_targets_figures import INK, SHELL_COLORS, SHELL_MARKERS, _style
+
+    plt = _style()
+    arms = decision["summary"]
+    shells = [key for key in arms["unmoved/hm-i9-hm"] if key.startswith(f"{PRIMARY}/")]
+    registrations = (("i9", "9 parameters"), ("i3", "Field only (3)"))
+    fig, axes = plt.subplots(
+        2, len(COPIES), figsize=(9.5, 5.6), sharex=True, sharey=True, layout="constrained"
+    )
+    x = np.arange(len(LADDER))
+    for row, (registration, name) in enumerate(registrations):
+        for col, copy in enumerate(COPIES):
+            ax = axes[row, col]
+            values = [arms[f"{copy}/{arm.format(r=registration)}"] for _, arm in LADDER]
+            ax.plot(x, [v[PRIMARY] for v in values], color=INK, lw=2, marker="D", ms=5)
+            for k, shell in enumerate(shells):
+                ax.plot(
+                    x,
+                    [v[shell] for v in values],
+                    color=SHELL_COLORS[k],
+                    lw=1.4,
+                    marker=SHELL_MARKERS[k],
+                    ms=4.5,
+                    markeredgecolor="white",
+                    markeredgewidth=0.6,
+                )
+            ax.grid(axis="y", color="#ecebe8", linewidth=0.6)
+            if row == 0:
+                ax.set_title(COPY_TITLES[copy], color=INK, fontsize=9, loc="left")
+            if col == 0:
+                ax.set_ylabel(f"{name}\nmedian error (mm)")
+    top = max(
+        arms[f"{copy}/{arm.format(r=registration)}"][key]
+        for copy in COPIES
+        for registration, _ in registrations
+        for _, arm in LADDER
+        for key in (PRIMARY, *shells)
+    )
+    axes[0, 0].set_ylim(0, 1.05 * top)
+    for ax in axes[-1]:
+        ax.set_xticks(x, [label for label, _ in LADDER], fontsize=7)
+    handles = [
+        plt.Line2D([], [], color=INK, marker="D", lw=2, label="All shells"),
+        *[
+            plt.Line2D(
+                [],
+                [],
+                color=SHELL_COLORS[k],
+                marker=SHELL_MARKERS[k],
+                lw=1.4,
+                label=f"b={key.split('/')[1]}",
+            )
+            for k, key in enumerate(shells)
+        ],
+    ]
+    fig.legend(
+        handles=handles, loc="outside upper center", ncols=len(handles), frameon=False, fontsize=8
+    )
+    fig.savefig(out / f"eddy-parts-{decision['protocol']}-sources.png", dpi=200)
+    plt.close(fig)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--results", type=Path, required=True, help="the run's folder")
@@ -459,6 +660,8 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(decision, indent=2) + "\n"
     )
     tables(decision, args.out)
+    invented_figure(decision, args.out)
+    ladder_figure(decision, args.out)
     print(
         f"Q1 {decision['q1']['holds']}, Q2 {decision['q2']['holds']} "
         f"(candidate {decision['q2']['candidate']}), Q3 {decision['q3']['holds']}, "

@@ -1,0 +1,5 @@
+Copy,Head motion (mm),Rotation (deg),Across PE (mm),Along PE (mm)
+unmoved,0.124,0.135,0.102,0.066
+m2s0,0.383,0.299,0.243,0.223
+e2,0.182,0.191,0.134,0.110
+m2s0e2,0.447,0.359,0.292,0.244
