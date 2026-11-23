@@ -35,7 +35,8 @@ Within each shell, the table gives:
   signal is).
 
 By chance alone, with 64 volumes a shell, the fits would explain about 3/63 (linear) and
-6/63 (quadratic) of the variance. Round 1 is Test 4's delayed pass, with the shared field
+5/63 (quadratic: on unit b-vectors the three squares sum to 1, so 5 of its 6 terms are
+free) of the variance. Round 1 is Test 4's delayed pass, with the shared field
 removed for the rounds that remove it::
 
     uv run tools/registration/eddy_pass_rounds_shares.py --dataset <phantoms> \\
