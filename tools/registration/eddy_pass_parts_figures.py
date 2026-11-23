@@ -36,7 +36,8 @@ A volume pairs with itself across copies: every copy has the same noise in it. T
 margins are 0.01 voxel: on the error, on the field and across phase encoding (mm); on the
 rotation, the angle that moves the brain's mean radius by 0.01 voxel; and on the volume
 change, Test 2's. Within a question, each interval is widened for the question's number
-of comparisons (Bonferroni). The rules (``hm``: the head-motion step):
+of comparisons (Bonferroni). The rules (``hm``: the head-motion step; #735 numbers Q1,
+Q2, Q3 and Q5 as rules 1 to 4, and the tables do too):
 
 Q1, invented head motion
     ``hm-i9-hm`` on ``e2``, against itself on ``unmoved`` and against ``hm-e12-hm`` on
@@ -394,18 +395,49 @@ def _interval(c: dict[str, Any], scale: float = 1.0) -> str:
 
 
 def comparisons(decision: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
-    """Every comparison of the rules, labelled, then those reported."""
+    """Every comparison of the rules, labelled as #735 numbers them, then those reported."""
     listed = []
     for question in ("q1", "q2", "q3"):
         for label, c in decision[question]["comparisons"].items():
-            listed.append((question.upper(), label, c))
+            listed.append((f"Rule {question[1]}", label, c))
     q5 = decision["q5"]
-    listed += [("Q5", "start", q5["start"]), ("Q5", "targets", q5["targets"])]
+    listed += [("Rule 4", "start", q5["start"]), ("Rule 4", "targets", q5["targets"])]
     for label, c in decision["reported"]["q6"].items():
-        listed.append(("Q6 (reported)", label, c))
+        listed.append(("Today's update (reported)", label, c))
     for label, c in decision["posthoc"].items():
         listed.append(("Post hoc", label, c))
     return listed
+
+
+def reported(decision: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
+    """The comparisons reported beside the rules: Q5 everywhere, better targets, today's."""
+    listed = []
+    for label, effects in decision["reported"]["q5"].items():
+        listed += [
+            ("The start", label, effects["start"]),
+            ("The targets", label, effects["targets"]),
+        ]
+    for group, name in (
+        ("better_targets_only", "Better targets only"),
+        ("against_today", "Against today's pass"),
+    ):
+        listed += [(name, label, c) for label, c in decision["reported"][group].items()]
+    return listed
+
+
+def _comparison_rows(listed: list[tuple[str, str, dict[str, Any]]]) -> list[list[Any]]:
+    shells = list(listed[0][2]["shells"])
+    return [
+        [
+            question,
+            f"{c['candidate']} against {c['reference']} ({label})",
+            c["key"],
+            _interval(c),
+            c["verdict"],
+            *(f"{c['shells'][s]['median']:+.3f} ({c['shells'][s]['verdict']})" for s in shells),
+        ]
+        for question, label, c in listed
+    ]
 
 
 def tables(decision: dict[str, Any], out: Path) -> None:
@@ -445,25 +477,13 @@ def tables(decision: dict[str, Any], out: Path) -> None:
         ],
     )
     listed = comparisons(decision)
-    shells = list(listed[0][2]["shells"])
+    header = ["Question", "Comparison", "Score", "Median difference [interval]", "Verdict"]
+    header += [f"b={s}" for s in listed[0][2]["shells"]]
+    _write(out / f"eddy-parts-{protocol}-comparisons.csv", header, _comparison_rows(listed))
     _write(
-        out / f"eddy-parts-{protocol}-comparisons.csv",
-        ["Question", "Comparison", "Score", "Median difference [interval]", "Verdict"]
-        + [f"b={s}" for s in shells],
-        [
-            [
-                question,
-                f"{c['candidate']} against {c['reference']} ({label})",
-                c["key"],
-                _interval(c),
-                c["verdict"],
-                *(
-                    f"{c['shells'][s]['median']:+.3f} ({c['shells'][s]['verdict']})"
-                    for s in shells
-                ),
-            ]
-            for question, label, c in listed
-        ],
+        out / f"eddy-parts-{protocol}-reported.csv",
+        header,
+        _comparison_rows(reported(decision)),
     )
     _write(
         out / f"eddy-parts-{protocol}-cascade.csv",

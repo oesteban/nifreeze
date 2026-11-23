@@ -33,3 +33,4 @@ approach.
    elastix-settings
    elastix-accuracy
    eddy-targets
+   eddy-pass-parts
