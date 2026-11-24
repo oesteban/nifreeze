@@ -44,7 +44,10 @@ each arm against today's pass (``pass-e12-u``); each arm's medians, and how far 
 from its start (``moved_mean``); the fit's exponent, matrix and stages on each copy.
 
 Writes ``<out>/eddy-field-start-<protocol>-decision.json``, its tables, and a figure of
-the rules' comparisons (``-comparisons.png``)::
+the rules' comparisons (``-comparisons.png``). The report's results come from two more
+tables, the methods' medians (``-methods.csv``) and their paired differences (95%,
+``-differences.csv``), and a figure of each method's error on each copy
+(``-methods.png``)::
 
     uv run tools/registration/eddy_field_start_figures.py --results <results> --out <out>
 """
@@ -86,6 +89,38 @@ BETTER = ("rule1", "rule2", "rule4")
 """The rules that need "better"; rule 3 needs "better" or "not worse"."""
 ARMS = ("hm-field", "hm-i9-field", "field-i9-field", DELAYED, "hm-i9-truth", "pass-e12-u")
 """The arms the tables list, in order."""
+METHODS = {
+    "pass-e12-u": "Today's pass",
+    DELAYED: "Delayed pass",
+    "hm-field": "Fit alone",
+    "field-i9-field": "Fit, then the pass",
+}
+"""The methods the results compare, as the report names them."""
+ORDER = ("m2s0e2", "e2", "m2s0", "unmoved")
+"""The copies, the one with head motion and eddy currents first."""
+TITLES = {
+    "m2s0e2": "Head motion and eddy currents",
+    "e2": "Eddy currents only",
+    "m2s0": "Head motion only",
+    "unmoved": "Neither",
+}
+"""The copies, as the report names them."""
+DIFFERENCES = (
+    ("Fit, then the pass, minus today's pass", "field-i9-field", "pass-e12-u", PRIMARY),
+    ("Fit, then the pass, minus the delayed pass", "field-i9-field", DELAYED, PRIMARY),
+    ("Fit alone minus today's pass", "hm-field", "pass-e12-u", PRIMARY),
+    ("Delayed pass minus today's pass", DELAYED, "pass-e12-u", PRIMARY),
+    ("Fit, then the pass, minus the fit alone", "field-i9-field", "hm-field", PRIMARY),
+    (
+        "The pass from the fit's field minus the pass from the head-motion step",
+        "hm-i9-field",
+        DELAYED,
+        PRIMARY,
+    ),
+    ("Fit alone minus the delayed pass", "hm-field", DELAYED, FIELD),
+    ("Fit, then the pass, minus the fit alone", "field-i9-field", "hm-field", FIELD),
+)
+"""The paired differences the report lists: label, candidate, reference and score."""
 
 
 def _rule(comparisons: dict[str, dict[str, Any]], better: bool) -> dict[str, Any]:
@@ -302,6 +337,149 @@ def comparisons_figure(decision: dict[str, Any], out: Path) -> None:
     plt.close(fig)
 
 
+def results_tables(
+    rows: list[dict[str, Any]], decision: dict[str, Any], out: Path, subset: str | None = SUBSET
+) -> None:
+    """The methods' medians and their paired differences (95%), as the report names them."""
+    protocol = decision["protocol"]
+    arms = decision["summary"]
+    copies = [copy for copy in ORDER if f"{copy}/{DELAYED}" in arms]
+    shells = sorted(
+        {
+            key.split("/")[1]
+            for values in arms.values()
+            for key in values
+            if key.startswith(f"{PRIMARY}/")
+        },
+        key=float,
+    )
+    _write(
+        out / f"eddy-field-start-{protocol}-methods.csv",
+        ["Copy", "Method", "Error (mm)", *(f"b={s}" for s in shells), "Field (mm)"],
+        [
+            [
+                TITLES[copy],
+                name,
+                f"{values[PRIMARY]:.3f}",
+                *(f"{values.get(f'{PRIMARY}/{s}', np.nan):.3f}" for s in shells),
+                f"{values[FIELD]:.3f}",
+            ]
+            for copy in copies
+            for arm, name in METHODS.items()
+            if (values := arms.get(f"{copy}/{arm}"))
+        ],
+    )
+    margins = decision["margins"]
+    listed = []
+    for copy in copies:
+        for label, candidate, reference, key in DIFFERENCES:
+            if f"{copy}/{candidate}" not in arms or f"{copy}/{reference}" not in arms:
+                continue
+            chosen = ((copy, candidate), (copy, reference))
+            c = compare(rows, *chosen, key, margins[key], subset=subset)
+            listed.append(
+                [
+                    TITLES[copy],
+                    label,
+                    "error" if key == PRIMARY else "field",
+                    _interval(c),
+                    *(
+                        f"{c['shells'][s]['median']:+.3f}" if s in c["shells"] else ""
+                        for s in shells
+                    ),
+                ]
+            )
+    _write(
+        out / f"eddy-field-start-{protocol}-differences.csv",
+        ["Copy", "Difference", "Score", "Median [95%] (mm)", *(f"b={s}" for s in shells)],
+        listed,
+    )
+
+
+def methods_figure(decision: dict[str, Any], out: Path) -> None:
+    """Each method's median error on each copy, overall (bars) and by shell (marks)."""
+    from eddy_targets_figures import INK, MUTED, SHELL_COLORS, SHELL_MARKERS, _style
+
+    plt = _style()
+    arms = decision["summary"]
+    copies = [copy for copy in ORDER if f"{copy}/{DELAYED}" in arms]
+    shells = sorted(
+        {
+            key.split("/")[1]
+            for values in arms.values()
+            for key in values
+            if key.startswith(f"{PRIMARY}/")
+        },
+        key=float,
+    )
+    fig, axes = plt.subplots(
+        1, len(copies), figsize=(9.5, 3.2), sharey=True, layout="constrained", squeeze=False
+    )
+    top = 0.0
+    x = np.arange(len(METHODS))
+    offsets = np.linspace(-0.22, 0.22, len(shells))
+    for ax, copy in zip(axes[0], copies, strict=True):
+        values = [arms[f"{copy}/{arm}"] for arm in METHODS]
+        overall = np.array([v[PRIMARY] for v in values])
+        colors = ["#d9d8d4"] * (len(METHODS) - 1) + ["#a9a7a2"]
+        ax.bar(x, overall, width=0.72, color=colors, edgecolor="white", linewidth=2, zorder=1)
+        for xi, value in zip(x, overall, strict=True):
+            # Inside the bar's foot, clear of the shells' marks
+            ax.annotate(
+                f"{value:.2f}",
+                (xi, 0),
+                xytext=(0, 4),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=7,
+                color=INK,
+            )
+        for k, s in enumerate(shells):
+            ys = np.array([v.get(f"{PRIMARY}/{s}", np.nan) for v in values])
+            top = max(top, float(np.nanmax(ys)), float(overall.max()))
+            ax.plot(
+                x + offsets[k],
+                ys,
+                lw=0,
+                color=SHELL_COLORS[k],
+                marker=SHELL_MARKERS[k],
+                ms=5,
+                markeredgecolor="white",
+                markeredgewidth=0.6,
+                zorder=2,
+            )
+        ax.set_title(TITLES[copy], color=INK, fontsize=9, loc="left")
+        ax.set_xticks(
+            x, [name.replace(", ", ",\n").replace(" ", "\n", 1) for name in METHODS.values()]
+        )
+        ax.tick_params(axis="x", labelsize=7, length=0)
+        ax.grid(axis="y", color="#ecebe8", linewidth=0.6, zorder=0)
+        ax.set_axisbelow(True)
+    axes[0, 0].set_ylabel("median error (mm)", color=MUTED)
+    axes[0, 0].set_ylim(0, 1.1 * top)
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, color="#d9d8d4", label="All shells"),
+        *[
+            plt.Line2D(
+                [],
+                [],
+                lw=0,
+                color=SHELL_COLORS[k],
+                marker=SHELL_MARKERS[k],
+                markeredgecolor="white",
+                label=f"b={s}",
+            )
+            for k, s in enumerate(shells)
+        ],
+    ]
+    fig.legend(
+        handles=handles, loc="outside upper center", ncols=len(handles), frameon=False, fontsize=8
+    )
+    fig.savefig(out / f"eddy-field-start-{decision['protocol']}-methods.png", dpi=200)
+    plt.close(fig)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--results", type=Path, required=True, help="the run's folder")
@@ -318,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     tables(decision, args.out)
     comparisons_figure(decision, args.out)
+    results_tables(rows, decision, args.out, args.subset)
+    methods_figure(decision, args.out)
     print(", ".join(f"{rule} {decision[rule]['holds']}" for rule in RULES))
     print(f"follows: {decision['follows']}")
     return 0
