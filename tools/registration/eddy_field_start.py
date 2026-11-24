@@ -65,6 +65,9 @@ step already written is not run again). With 6 cores::
 
     OMP_NUM_THREADS=6 uv run tools/registration/eddy_field_start.py --dataset <dataset> \\
         --test4 <Test 4's results>/arms --out <out> --jobs 6 --threads 6
+
+After the results, ``--posthoc`` runs nothing: it scores the arms of :data:`DERIVED`, from
+the stored estimates, to ``<out>/<protocol>-posthoc.{tsv,json,npz}``.
 """
 
 import argparse
@@ -80,6 +83,7 @@ from typing import Any
 import eddy_pass_parts as parts
 import nibabel as nb
 import numpy as np
+from eddy_pass_rounds import _removed
 from eddy_targets import (
     CASCADE,
     NOISE,
@@ -110,6 +114,10 @@ READ = ("hm-i9-hm", "hm-i9-truth", "pass-e12-u")
 """The arms read from Test 4."""
 ARMS = (FIT, *FROM_FIT, CHECK, *READ)
 """Every arm, in the order they run."""
+DERIVED = {"field-i9-field-removed": "field-i9-field", "hm-i9-hm-removed": "hm-i9-hm"}
+"""After the results (``--posthoc``): another arm's estimates with the shared field removed
+(:func:`~nifreeze.registration.utils.remove_shared_field`, per shell, about the brain's
+centroid), as Test 5's ``removed1-i9``."""
 
 
 def _path(args: argparse.Namespace, name: str, arm: str) -> Path:
@@ -273,14 +281,15 @@ def _run_steps(args: argparse.Namespace) -> None:
 def _arm_rows(name: str, arm: str, values: Any, context: dict, frames: dict) -> list[dict]:
     """An arm's rows, scored as Test 4 scores them, in its targets' frame."""
     proxy = arm if arm in READ else "hm-i9-hm"
-    frame = frames["field"] if arm == "field-i9-field" else frames["hm"]
+    source = DERIVED.get(arm, arm)
+    frame = frames["field"] if source == "field-i9-field" else frames["hm"]
     rows = parts._rows(name, proxy, values, context | {"offset": frame})
     for row in rows:
         index = row["index"]
         row["arm"] = arm
-        if arm == "field-i9-field":
+        if source == "field-i9-field":
             row["targets"] = "field"
-        if arm in (FIT, *FROM_FIT):
+        if source in (FIT, *FROM_FIT):
             row["registration"] = "field" if arm == FIT else "i9"
             row["start"] = "hm" if arm == FIT else "field"
         row["moved_mean"] = float(
@@ -335,6 +344,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--copies", nargs="+", default=list(COPIES), choices=list(COPIES))
     parser.add_argument("--jobs", type=int, default=1, help="registrations at a time")
     parser.add_argument("--threads", type=int, default=1, help="of the models and the fit")
+    parser.add_argument(
+        "--posthoc", action="store_true", help="score only the arms derived after the results"
+    )
     parser.add_argument("--run", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     (args.out / "arms").mkdir(parents=True, exist_ok=True)
@@ -346,7 +358,8 @@ def main(argv: list[str] | None = None) -> int:
 
     commit = _dataset_commit(args.dataset)
     wall = perf_counter()
-    _run_steps(args)
+    if not args.posthoc:
+        _run_steps(args)
 
     reference, cells = load_phantom(args.dataset, args.protocol, noise=NOISE)
     n_volumes = len(reference)
@@ -385,6 +398,14 @@ def main(argv: list[str] | None = None) -> int:
         if FIT in stored:
             frames["field"] = _common(np.asarray(stored[FIT]["estimates"]), truth["whole"])
             fields[name] = _field(stored[FIT])
+        if args.posthoc:
+            volumes = list(range(n_volumes))
+            stored = {
+                arm: stored[source]
+                | {"estimates": _removed(stored[source]["estimates"], reference, pe, volumes)}
+                for arm, source in DERIVED.items()
+                if source in stored
+            }
         context = base | {
             "truth": truth,
             "splits": [split_phase_encoding(whole, u)[0] for whole in truth["whole"]],
@@ -400,9 +421,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{name} {arm}: median error {median:.3f} mm", flush=True)
         checks |= _checks(name, stored, cascade, context)
 
+    label = f"{args.protocol}-posthoc" if args.posthoc else args.protocol
     table, _ = write_results(
         args.out,
-        args.protocol,
+        label,
         rows,
         {
             "Protocol": args.protocol,
@@ -416,7 +438,8 @@ def main(argv: list[str] | None = None) -> int:
             "Noise": NOISE,
             "Seed": SEED,
             "Model": MODEL,
-            "Arms": list(ARMS),
+            "Arms": list(DERIVED) if args.posthoc else list(ARMS),
+            "Derived": DERIVED if args.posthoc else {},
             "ReadFromTest4": list(READ),
             "Fields": fields,
             "Order": order,
@@ -430,7 +453,7 @@ def main(argv: list[str] | None = None) -> int:
             "Provenance": provenance() | {"ItkElastix": version("itk-elastix")},
         },
     )
-    np.savez_compressed(args.out / f"{args.protocol}.npz", order=np.asarray(order), **arrays)
+    np.savez_compressed(args.out / f"{label}.npz", order=np.asarray(order), **arrays)
     print(f"wrote {table}; checks {checks}", flush=True)
     return 0
 
