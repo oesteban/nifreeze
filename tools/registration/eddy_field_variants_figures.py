@@ -45,9 +45,11 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from eddy_pass_parts_figures import PRIMARY, SUBSET, _interval, _margins, _write, compare, read
+from eddy_pass_parts_figures import PRIMARY, SUBSET, _interval, _write, compare, read
 from eddy_pass_parts_figures import summary as medians
 
+MARGIN_MM = 0.02
+"""The working hypothesis's margin: 0.01 of Sherbrooke's 2 mm voxel, as in Test 4."""
 MAIN = "m2s0e2"
 """The copy the decision is made on: head motion and eddy currents."""
 REFERENCE = "cp-free"
@@ -99,7 +101,7 @@ def methods() -> dict[str, str]:
 
 def decide(rows: list[dict[str, Any]], meta: dict[str, Any], subset: str | None = SUBSET):
     """Test 8's decision, and every comparison reported."""
-    margin = _margins(meta)[PRIMARY]
+    margin = MARGIN_MM
     copies = [copy for copy in ORDER if copy in meta["Copies"]]
 
     def paired(copy, candidate, reference, key=PRIMARY):

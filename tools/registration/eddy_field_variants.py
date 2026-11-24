@@ -377,6 +377,11 @@ def main(argv: list[str] | None = None) -> int:
         {
             "Protocol": args.protocol,
             "Copies": {name: COPIES[name] for name in args.copies},
+            "VoxelSize": np.linalg.norm(reference.affine[:3, :3], axis=0).tolist(),
+            # The brain's mean distance to its centroid, as Test 2's
+            "MeanRadiusMm": float(
+                np.linalg.norm(points - points.mean(axis=1, keepdims=True), axis=0).mean()
+            ),
             "Edges": list(_edges(reference.gradients[:, -1])),
             "Noise": NOISE,
             "Seed": SEED,
