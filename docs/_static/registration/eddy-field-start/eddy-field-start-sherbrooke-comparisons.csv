@@ -1,0 +1,7 @@
+Group,Comparison,Score,Median difference [interval],Verdict,b=1000,b=2000,b=3500
+"Rule 1: the start, the pass from the fit",m2s0e2/hm-i9-field against m2s0e2/hm-i9-hm (m2s0e2),whole_frame_mean,"-0.000 [-0.000, +0.000]",not worse,-0.000 (not worse),-0.000 (not worse),+0.000 (not worse)
+"Rule 2: the field, the fit",e2/hm-field against e2/hm-i9-hm (e2),field_mean,"-0.076 [-0.130, -0.021]",better,-0.139 (better),-0.066 (not worse),+0.069 (inconclusive)
+"Rule 2: the field, the fit",m2s0e2/hm-field against m2s0e2/hm-i9-hm (m2s0e2),field_mean,"-0.093 [-0.116, -0.027]",better,-0.123 (better),-0.041 (better),+0.040 (inconclusive)
+"Rule 3: invented field, the fit",unmoved/hm-field against unmoved/hm-i9-hm (unmoved),field_mean,"-0.175 [-0.200, -0.156]",better,-0.258 (better),-0.175 (better),-0.086 (better)
+"Rule 3: invented field, the fit",m2s0/hm-field against m2s0/hm-i9-hm (m2s0),field_mean,"-0.193 [-0.201, -0.173]",better,-0.253 (better),-0.193 (better),-0.062 (better)
+Rule 4: the two passes in a row,m2s0e2/field-i9-field against m2s0e2/hm-i9-hm (m2s0e2),whole_frame_mean,"-0.068 [-0.094, -0.044]",better,+0.007 (inconclusive),-0.073 (better),-0.146 (better)

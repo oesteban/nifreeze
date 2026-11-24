@@ -1,0 +1,25 @@
+Copy,Method,Error (mm),b=1000,b=2000,b=3500,Field (mm)
+Head motion and eddy currents,Today's pass,0.604,0.735,0.552,0.591,0.356
+Head motion and eddy currents,Delayed pass,0.423,0.345,0.423,0.510,0.328
+Head motion and eddy currents,"Delayed pass, shared field removed",0.412,0.294,0.414,0.492,0.278
+Head motion and eddy currents,Fit alone,0.461,0.295,0.443,0.717,0.264
+Head motion and eddy currents,"Fit, then the pass",0.369,0.336,0.359,0.437,0.226
+Head motion and eddy currents,"Fit, then the pass, shared field removed",0.320,0.257,0.321,0.429,0.107
+Eddy currents only,Today's pass,0.446,0.524,0.426,0.417,0.316
+Eddy currents only,Delayed pass,0.328,0.276,0.312,0.509,0.314
+Eddy currents only,"Delayed pass, shared field removed",0.311,0.200,0.288,0.500,0.253
+Eddy currents only,Fit alone,0.250,0.162,0.250,0.582,0.261
+Eddy currents only,"Fit, then the pass",0.255,0.255,0.203,0.367,0.213
+Eddy currents only,"Fit, then the pass, shared field removed",0.179,0.132,0.152,0.356,0.098
+Head motion only,Today's pass,0.495,0.697,0.473,0.409,0.211
+Head motion only,Delayed pass,0.357,0.344,0.354,0.411,0.211
+Head motion only,"Delayed pass, shared field removed",0.308,0.250,0.284,0.415,0.051
+Head motion only,Fit alone,0.352,0.263,0.343,0.512,0.016
+Head motion only,"Fit, then the pass",0.355,0.330,0.347,0.381,0.210
+Head motion only,"Fit, then the pass, shared field removed",0.290,0.240,0.286,0.389,0.053
+Neither,Today's pass,0.285,0.453,0.287,0.239,0.149
+Neither,Delayed pass,0.252,0.270,0.205,0.298,0.196
+Neither,"Delayed pass, shared field removed",0.158,0.136,0.118,0.290,0.048
+Neither,Fit alone,0.126,0.109,0.109,0.289,0.016
+Neither,"Fit, then the pass",0.256,0.269,0.204,0.292,0.194
+Neither,"Fit, then the pass, shared field removed",0.153,0.139,0.116,0.282,0.049
