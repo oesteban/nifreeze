@@ -51,6 +51,9 @@ Every arm is scored as Test 7 scores it: the fits and the arms with Test 4's tar
 the frame of the head-motion step; a chain in the frame that all of its fit's estimates
 share against the truth's whole mapping.
 
+The options this test compares were dropped from #743 after it, so this script runs
+only as it ran, at oesteban/nifreeze@4764024ce.
+
 Writes ``<out>/<protocol>.{tsv,json,npz}``, and each step's results to ``<out>/arms/`` (a
 step already written is not run again). With 6 cores::
 
@@ -90,7 +93,7 @@ from experiments import provenance, subset, write_results
 
 from nifreeze.analysis.phantoms import load_phantom
 from nifreeze.registration.base import AFFINE
-from nifreeze.registration.eddy_field import EddyFieldFit, SegmentedEddyField
+from nifreeze.registration.eddy_field import EddyFieldFit
 from nifreeze.registration.utils import phase_encoding_vector, split_phase_encoding
 
 VARIANTS = {
@@ -133,13 +136,15 @@ def _fit() -> dict[str, Any]:
     variant = VARIANTS[shared["variant"]]
     gradients = np.asarray(copy.gradients)
     began = perf_counter()
+    options: dict[str, Any] = {"shifts": variant["shifts"]}
+    if variant["shells"]:
+        options["segments"] = _edges(gradients[:, 3])
     fit = EddyFieldFit(
         AFFINE,
         phase_encoding=copy.phase_encoding,
         seed=SEED,
         num_threads=shared["threads"],
-        segments=_edges(gradients[:, 3]) if variant["shells"] else None,
-        shifts=variant["shifts"],
+        **options,
     )
     for index in sorted(targets):
         fit.add(index, targets[index], copy[index][0], copy.affine, copy.brainmask, starts[index])
@@ -149,7 +154,7 @@ def _fit() -> dict[str, Any]:
     eddy = motion.copy()
     for index, (head_motion, matrix) in fit.mappings().items():
         motion[index], eddy[index] = head_motion, matrix
-    pieces = field.parts if isinstance(field, SegmentedEddyField) else (field,)
+    pieces = getattr(field, "parts", (field,))
     return {
         "estimates": eddy @ motion,
         "motion": motion,

@@ -157,7 +157,7 @@ def _fit() -> dict[str, Any]:
     }
 
 
-def _pass(volumes: list[int], n_volumes: int, jobs: int) -> dict[str, np.ndarray]:
+def _pass(volumes: list[int], n_volumes: int, jobs: int) -> dict[str, Any]:
     """The 9-parameter registration of ``volumes`` (``parts._SHARED``), in a pool."""
     estimates = np.repeat(np.eye(4)[np.newaxis], n_volumes, axis=0)
     seconds = np.full(n_volumes, np.nan)

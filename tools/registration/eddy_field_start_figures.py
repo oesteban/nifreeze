@@ -189,9 +189,9 @@ def decide(
     moved = {}
     for copy in copies:
         for arm in ARMS:
-            chosen = list(_select(rows, copy, arm, subset).values())
-            if chosen:
-                moved[f"{copy}/{arm}"] = float(np.median([row["moved_mean"] for row in chosen]))
+            picked = list(_select(rows, copy, arm, subset).values())
+            if picked:
+                moved[f"{copy}/{arm}"] = float(np.median([row["moved_mean"] for row in picked]))
     decision["reported"] = {
         "start": every("hm-i9-field", DELAYED),
         "field": every("hm-field", DELAYED, FIELD),
