@@ -41,15 +41,22 @@ The datasets (:func:`names`), each run in a process of its own:
     largest displacement in the brain is ``eddy`` mm, and noise.
 
 On each, the head-motion step (gqi-krr then gp-loo, rigid, elastix) runs once. Then, from
-its estimates and with gp-loo predictions, the methods (:data:`METHODS`):
+its estimates, the methods (:data:`METHODS`):
 
 ``A``
-    Per-volume registration: ``Estimator("gp-loo", estimates="eddy")``, elastix with
-    ``affine.yaml``, as ``--eddy`` runs it.
+    Per-volume registration to gp-loo predictions: ``Estimator("gp-loo",
+    estimates="eddy")``, elastix with ``affine.yaml``, as ``--eddy`` runs it.
 ``B``
-    The global model with one matrix ``C`` and one exponent ``p`` (``EddyFieldFit()``).
+    The global model with one matrix ``C`` and one exponent ``p`` (``EddyFieldFit()``),
+    with gp-loo predictions.
 ``Bq``
-    The global model with one ``C`` for each shell (``EddyFieldFit(edges=...)``).
+    The global model with one ``C`` for each shell (``EddyFieldFit(edges=...)``), with
+    gp-loo predictions.
+``A-gqi``, ``B-gqi``
+    ``A`` and ``B`` with gqi-krr predictions.
+
+A dataset already run is resumed: its head-motion step and methods are read back, and
+only the methods it lacks run.
 
 The fields' zero point is the centre of the field of view on the real data, and the
 phantom's point on the phantoms (#744).
@@ -102,8 +109,22 @@ SEED = 12345
 """Seed of the estimators."""
 CASCADE = ("gqi-krr", "gp-loo")
 """The head-motion step's models, in order."""
-METHODS = ("A", "B", "Bq")
-"""Per-volume registration, the global model with one C, and with one C per shell."""
+METHODS = {
+    "A": ("gp-loo", None),
+    "B": ("gp-loo", "one"),
+    "Bq": ("gp-loo", "shells"),
+    "A-gqi": ("gqi-krr", None),
+    "B-gqi": ("gqi-krr", "one"),
+}
+"""Each method's predictions, and its form of the global model (one C, or one C per
+shell); per-volume registration has none."""
+RESIDUALS = {
+    "residual_B": ("A", "B"),
+    "residual_Bq": ("A", "Bq"),
+    "B_vs_Bq": ("B", "Bq"),
+    "residual_B_gqi": ("A-gqi", "B-gqi"),
+}
+"""The residuals scored: each between the fields of two methods."""
 MOTIONS = (0.0, 0.5, 1.0, 2.0, 4.0)
 """Each copy's head motion (degrees and mm)."""
 EDDIES = {"sherbrooke": (4.0, 8.0, 16.0), "hcpya": (2.5, 5.0, 10.0)}
@@ -211,32 +232,47 @@ def run(args: argparse.Namespace, name: str) -> None:
     runs.mkdir(parents=True, exist_ok=True)
     began = perf_counter()
     dwi, truth, zero = _real(args.out) if name == "real" else _phantom(args.dataset, name)
-    seconds: dict[str, float] = {"load": perf_counter() - began}
+    loaded = perf_counter() - began
     options = {"omp_nthreads": args.threads, "n_jobs": args.threads, "seed": SEED}
-
-    for model in CASCADE:
-        began = perf_counter()
-        Estimator(model, registration="elastix").run(dwi, **options)
-        seconds[f"motion/{model}"] = perf_counter() - began
-        print(f"{name}: head motion, {model}, {seconds[f'motion/{model}']:.0f} s", flush=True)
-    assert dwi.motion is not None
-    head_motion = dwi.motion.copy()
-
     edges = _edges(dwi.gradients[:, 3])
-    estimates: dict[str, np.ndarray] = {"head_motion": head_motion}
-    record: dict[str, Any] = {"Name": name, "Edges": list(edges), "ZeroPoint": zero.tolist()}
-    for method in METHODS:
+
+    estimates: dict[str, np.ndarray]
+    if (runs / f"{name}.npz").exists():  # resumed: the head-motion step and methods run
+        with np.load(runs / f"{name}.npz") as saved:
+            estimates = {
+                key: saved[key]
+                for key in saved.files
+                if key == "head_motion" or key.split("/")[0] in METHODS
+            }
+        record: dict[str, Any] = json.loads((runs / f"{name}.json").read_text())
+        seconds: dict[str, float] = record["Seconds"]
+        print(f"{name}: resumed with {sorted({k.split('/')[0] for k in estimates})}", flush=True)
+    else:
+        seconds = {"load": loaded}
+        for model in CASCADE:
+            began = perf_counter()
+            Estimator(model, registration="elastix").run(dwi, **options)
+            seconds[f"motion/{model}"] = perf_counter() - began
+            print(f"{name}: head motion, {model}, {seconds[f'motion/{model}']:.0f} s", flush=True)
+        assert dwi.motion is not None
+        estimates = {"head_motion": dwi.motion.copy()}
+        record = {"Name": name, "Edges": list(edges), "ZeroPoint": zero.tolist()}
+    head_motion = estimates["head_motion"]
+
+    for method, (model, form) in METHODS.items():
+        if f"{method}/eddy" in estimates:
+            continue
         dwi.motion, dwi.eddy = head_motion.copy(), None
         fit = None
-        if method == "A":
-            estimator = Estimator("gp-loo", estimates="eddy")
+        if form is None:
+            estimator = Estimator(model, estimates="eddy")
         else:
             fit = EddyFieldFit(
                 num_threads=args.threads,
                 zero_point=zero,
-                edges=edges if method == "Bq" else None,
+                edges=edges if form == "shells" else None,
             )
-            estimator = Estimator("gp-loo", estimates="eddy", registration=fit)
+            estimator = Estimator(model, estimates="eddy", registration=fit)
         began = perf_counter()
         estimator.run(dwi, **options)
         seconds[method] = perf_counter() - began
@@ -257,6 +293,8 @@ def run(args: argparse.Namespace, name: str) -> None:
         "Threads": args.threads,
         "Provenance": provenance(),
     }
+    # Each launch's provenance, the first included (a resumed dataset has several)
+    record.setdefault("Launches", []).append(record["Provenance"])
     arrays: dict[str, Any] = {
         "affine": dwi.affine,
         "mask": np.asanyarray(dwi.brainmask, dtype=bool),
@@ -289,19 +327,21 @@ def score(args: argparse.Namespace, name: str) -> None:
     affine, mask, gradients = saved["affine"], saved["mask"], saved["gradients"]
     u = phase_encoding_vector(record["PhaseEncoding"], affine)
     points = _brain(affine, mask)
-    slopes = {method: field_slopes(saved[f"{method}/eddy"], u) for method in METHODS}
+    methods = [method for method in METHODS if f"{method}/eddy" in saved.files]
+    slopes = {method: field_slopes(saved[f"{method}/eddy"], u) for method in methods}
     shells = np.round(gradients[:, 3], -2)
     zero = np.asarray(record["ZeroPoint"])
     world = nb.affines.apply_affine(affine, np.argwhere(mask)).T
     record["EddySizeMm"] = {
         method: float(np.max(np.abs(slopes[method] @ (world - zero[:, np.newaxis]))))
-        for method in ("B", "Bq")
+        for method in methods
+        if METHODS[method][1] is not None
     }
 
     columns: dict[str, np.ndarray] = {
-        "residual_B": _apart(slopes["A"], slopes["B"], points),
-        "residual_Bq": _apart(slopes["A"], slopes["Bq"], points),
-        "B_vs_Bq": _apart(slopes["B"], slopes["Bq"], points),
+        column: _apart(slopes[first], slopes[second], points)
+        for column, (first, second) in RESIDUALS.items()
+        if first in slopes and second in slopes
     }
     checks: dict[str, float] = {}
     if "truth/eddy" in saved:
@@ -324,7 +364,7 @@ def score(args: argparse.Namespace, name: str) -> None:
                 for e, t in zip(_remove_offset(whole, whole)[:3], whole[:3], strict=True)
             )
         )
-        for method in METHODS:
+        for method in methods:
             columns[f"field_error_{method}"] = _apart(slopes[method], truth_slopes, points)
             estimated = _remove_offset(saved[f"{method}/eddy"] @ saved[f"{method}/motion"], whole)
             columns[f"error_{method}"] = np.array(
@@ -349,6 +389,15 @@ def score(args: argparse.Namespace, name: str) -> None:
             values += [f"{column[index]:.6g}" for column in columns.values()]
             stream.write("\t".join("" if v is None else str(v) for v in values) + "\n")
     print(f"{name}: scored", flush=True)
+
+
+def _complete(out: Path, name: str) -> bool:
+    """Whether a dataset has every method run and is scored."""
+    saved, table = out / "runs" / f"{name}.npz", out / "runs" / f"{name}.tsv"
+    if not (saved.exists() and table.exists()):
+        return False
+    with np.load(saved) as arrays:
+        return all(f"{method}/eddy" in arrays.files for method in METHODS)
 
 
 def _launch(args: argparse.Namespace, name: str) -> int:
@@ -407,6 +456,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     args.dataset, args.out = args.dataset.resolve(), args.out.resolve()
     if args.run is not None:
+        # A run handed over to another launcher (``<out>/handover``) is skipped
+        if (args.out / "handover").exists():
+            print(f"{args.run}: handed over, skipped", flush=True)
+            return 0
         run(args, args.run)
         return 0
     chosen = args.only or names()
@@ -415,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
             if (args.out / "runs" / f"{name}.npz").exists():
                 score(args, name)
     elif not args.gather:
-        todo = [name for name in chosen if not (args.out / "runs" / f"{name}.tsv").exists()]
+        todo = [name for name in chosen if not _complete(args.out, name)]
         with ThreadPoolExecutor(args.jobs) as pool:
             statuses = list(pool.map(lambda name: _launch(args, name), todo))
         failed = [name for name, status in zip(todo, statuses, strict=True) if status]
